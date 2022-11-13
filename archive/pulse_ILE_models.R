@@ -115,15 +115,14 @@ sum(df_all$SNAP == "Missing") / nrow(df_all)
 
 # -------------------------------------------------------------------------
 
-
+# filter missing outcome / covariates
 df_nomissingPHQ <- df_all %>%
   filter(!PHQ4_missing) 
 
 N_nomissingPHQ <- nrow(df_nomissingPHQ)
-N_all - N_nomissingPHQ
-(N_all - N_nomissingPHQ) / N_all
+N_all - N_nomissingPHQ # total with missing anx/dep outcome PHQ score
+(N_all - N_nomissingPHQ) / N_all # percent with missing anx/dep outcome PHQ score
 
-# filter missing
 df_nomissing <- df_nomissingPHQ %>%
   filter(INCOME_4 != "Missing") %>%
   filter(LOST_WORK != "Missing") %>%
@@ -134,8 +133,8 @@ df_nomissing <- df_nomissingPHQ %>%
   filter(SNAP != "Missing")  
 
 N_nomissing <- nrow(df_nomissing)
-N_nomissingPHQ - N_nomissing
-(N_nomissingPHQ - N_nomissing) / N_nomissingPHQ
+N_all - N_nomissing # total with any missing variables
+(N_all - N_nomissing) / N_all # percent with any missing variables
 
 # filter by eligible income
 df_eligible <- df_nomissing %>%
@@ -188,57 +187,57 @@ df <- df_eligible_workingage %>%
 # -------------------------------------------------------------------------
 
 
-# # chi-square test
-# 
-# round( chisq.test(df$EIP_RECV, df$GENDER)$p.value , digits=3)
-# round( chisq.test(df$EIP_RECV, df$withCHILDREN)$p.value , digits=3)
-# round( chisq.test(df$EIP_RECV, df$RACE_5)$p.value , digits=3)
-# round( chisq.test(df$EIP_RECV, df$INCOME_4)$p.value , digits=3)
-# round( chisq.test(df$EIP_RECV, df$EDU_2)$p.value , digits=3)
-# round( chisq.test(df$EIP_RECV, df$AGE_4)$p.value , digits=3)
-# round( chisq.test(df$EIP_RECV, df$MS)$p.value , digits=3)
-# round( chisq.test(df$EIP_RECV, df$LOST_WORK)$p.value , digits=3)
-# round( chisq.test(df$EIP_RECV, df$NOWORK_COVID)$p.value , digits=3)
-# 
-# 
-# calc_var_n_prop <- function(df, groupVar){
-#   # get proportions of each group
-#   df_prop <- data.frame( round( ( prop.table(table(df$EIP_RECV, df[[groupVar]]),2) ) * 100 , digits = 1)) %>%
-#     rename(EIP = Var1 ,
-#            group = Var2,
-#            prop = Freq)
-#   
-#   # get counts of each group
-#   df_n <- df %>%
-#     count(!!sym(groupVar) )
-#   names(df_n) <- c("group", "n")
-#   
-#   
-#   df_long <- data.frame( table(df$EIP_RECV, df[[groupVar]])  ) %>%
-#     rename(EIP = Var1 ,
-#            group = Var2,
-#            n = Freq) %>%
-#     left_join(df_prop, by = c("EIP", "group")) %>%
-#     mutate(n_prop_str = paste0(n, " (", prop, "%)"))
-#   
-#   
-#   df_table1_formatted <- df_long %>%
-#     select(c("EIP", "group", "n_prop_str")) %>%
-#     filter(EIP == "Received stimulus payment\nin past 7 days") %>%
-#     # group_by(group) %>%
-#     pivot_wider(names_from = EIP, values_from = n_prop_str) %>%
-#     right_join(df_n, by = "group") 
-#   
-#   
-#   return(df_table1_formatted)
-# }
-# 
-# 
-# df_table1 <- c("GENDER", "AGE_4", "RACE_5", "EDU_2", "INCOME_4", "LOST_WORK", "NOWORK_COVID", "withCHILDREN", "UI", "SNAP") %>%
-#   map_df( ~ calc_var_n_prop(df, .x) )
-# 
-# 
-# write.csv(df_table1, file.path(saveDataPath, table1fileName), row.names = FALSE )
+# chi-square test
+
+round( chisq.test(df$EIP_RECV, df$GENDER)$p.value , digits=3)
+round( chisq.test(df$EIP_RECV, df$withCHILDREN)$p.value , digits=3)
+round( chisq.test(df$EIP_RECV, df$RACE_5)$p.value , digits=3)
+round( chisq.test(df$EIP_RECV, df$INCOME_4)$p.value , digits=3)
+round( chisq.test(df$EIP_RECV, df$EDU_2)$p.value , digits=3)
+round( chisq.test(df$EIP_RECV, df$AGE_4)$p.value , digits=3)
+round( chisq.test(df$EIP_RECV, df$MS)$p.value , digits=3)
+round( chisq.test(df$EIP_RECV, df$LOST_WORK)$p.value , digits=3)
+round( chisq.test(df$EIP_RECV, df$NOWORK_COVID)$p.value , digits=3)
+
+
+calc_var_n_prop <- function(df, groupVar){
+  # get proportions of each group
+  df_prop <- data.frame( round( ( prop.table(table(df$EIP_RECV, df[[groupVar]]),2) ) * 100 , digits = 1)) %>%
+    rename(EIP = Var1 ,
+           group = Var2,
+           prop = Freq)
+
+  # get counts of each group
+  df_n <- df %>%
+    count(!!sym(groupVar) )
+  names(df_n) <- c("group", "n")
+
+
+  df_long <- data.frame( table(df$EIP_RECV, df[[groupVar]])  ) %>%
+    rename(EIP = Var1 ,
+           group = Var2,
+           n = Freq) %>%
+    left_join(df_prop, by = c("EIP", "group")) %>%
+    mutate(n_prop_str = paste0(n, " (", prop, "%)"))
+
+
+  df_table1_formatted <- df_long %>%
+    select(c("EIP", "group", "n_prop_str")) %>%
+    filter(EIP == "Received stimulus payment\nin past 7 days") %>%
+    # group_by(group) %>%
+    pivot_wider(names_from = EIP, values_from = n_prop_str) %>%
+    right_join(df_n, by = "group")
+
+
+  return(df_table1_formatted)
+}
+
+
+df_table1 <- c("GENDER", "AGE_4", "RACE_5", "EDU_2", "INCOME_4", "LOST_WORK", "NOWORK_COVID", "withCHILDREN", "UI", "SNAP") %>%
+  map_df( ~ calc_var_n_prop(df, .x) )
+
+
+write.csv(df_table1, file.path(saveDataPath, table1fileName), row.names = FALSE )
 
 
 # -------------------------------------------------------------------------

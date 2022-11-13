@@ -1,41 +1,35 @@
 
 rm(list=ls())
 
-path_wd <- "C:/Users/markh/OneDrive/Documents/BUSPH_Research/Covid_MentalHealth/Scripts_ILE"
+path_wd <- "C:/Users/markh/OneDrive/Documents/BUSPH_Research/Stimulus_Manuscript_DataAndCode/Stimulus_AnxDep"
 setwd(path_wd)
 
 library(tidyverse)
 library(purrr)
-source("../Scripts/pulse_process_functions.R")
+source("Stim_Pulse_functions.R")
 
 # -------------------------------------------------------------------------
 
 # data path
-dataPath <- "../Data/"
+dataPath <- "../Data_stim_manuscript/"
 rawDataPath <- file.path(dataPath, "PUF_CSV")
-
-outputPath <- file.path(dataPath, "National_PulseData_ILE")
-filePath_var_OI <- file.path(outputPath, "var_OI_ILE.csv")
 
 # -------------------------------------------------------------------------
 
-dir.create(outputPath, showWarnings = FALSE)
+
 
 df_states <- read.csv(file.path(dataPath, "pulse_states.csv")) %>%
   mutate(REGION = as.factor(REGION))
 
 # import table indicating variables to import
-var_OI <- import_clean_var_OI(filePath_var_OI)
+var_OI <- import_clean_var_OI( file.path(dataPath, "variables_of_interest.csv") )
 
 # -------------------------------------------------------------------------
 # import all survey data, filter and merge
 # -------------------------------------------------------------------------
 
 # get paths to each survey
-fullFilePaths_tmp <- getFilePaths(rawDataPath)
-
-# only import select Weeks
-fullFilePaths <- fullFilePaths_tmp[13:length(fullFilePaths_tmp) ]
+fullFilePaths <- getFilePaths(rawDataPath)
 
 
 # -------------------------------------------------------------------------
@@ -60,12 +54,12 @@ df_import <- df_import %>%
 
 # save data frame with variables of interest
 write.csv(df_import,
-          file.path(outputPath, "National_Pulse_imported.csv"),
+          file.path(dataPath, "National_Pulse_imported.csv"),
           row.names = F)
 
 
 # write.csv(df_import %>% filter(WEEK <= 22),
-#           file.path(outputPath, "National_Pulse_Week13_22_StimulusPayment.csv"),
+#           file.path(dataPath, "National_Pulse_Week13_22_StimulusPayment.csv"),
 #           row.names = F)
 
   

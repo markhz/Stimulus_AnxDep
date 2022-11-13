@@ -6,10 +6,8 @@ setwd(path_wd)
 
 library(tidyverse)
 library(purrr)
-library(mice)
 library(tictoc)
 library(survey)
-library(RColorBrewer)
 source("../Scripts/pulse_process_functions.R")
 
 # -------------------------------------------------------------------------
@@ -22,6 +20,7 @@ filePath_weektime <- file.path(dataPath, "pulse_weeknum_to_date.csv")
 
 
 # save data frame with variables of interest
+# df_import <- read.csv(file.path(importDataPath, "National_Pulse_imported_imputed_ILE22.csv") )
 df_import <- read.csv(file.path(importDataPath, "National_Pulse_imported.csv") )
 
 df_cusp <- read.csv(file.path(importDataPath, "CUSP_data_20210310.csv")) %>%
@@ -60,23 +59,59 @@ df_all <- construct_new_pulse_var(df_import) %>%
          RENT_BHND = RENTCUR == 2, 
          RENT_BHND_missing = RENTCUR < 0,
          MONEYINSUF = EXPNS_DIF %in% c(3,4),
-         MONEYINSUF_missing = EXPNS_DIF < 0 ) 
+         MONEYINSUF_missing = EXPNS_DIF < 0 )  %>%
+  left_join(df_cusp, by = c("EST_ST" = "FIPS")) %>%
+  left_join(df_weektime, by = "WEEK") 
+
+
+
+var_include <- c("SCRAM", "WEEK", "EST_ST", "PWEIGHT", "HWEIGHT", "Phase",
+                 "midDate", "startDate", "endDate",
+                 "ANXIETY_3","ANXIETY_4","ANXIETY_5","ANXIETY_6",
+                 "DEPRESSION_3","DEPRESSION_4","DEPRESSION_5","DEPRESSION_6",
+                 "MONEYINSUF", "FOODINSUF", "RENT_BHND", 
+                 "PHQ4_missing", "MONEYINSUF_missing", "FOODINSUF_missing", "RENT_BHND_missing", 
+                 "EIP_RECV", "UI", "SNAP",
+                 "GENDER","AGE", "AGE_4", "RACE_5", "withCHILDREN", "MS",
+                 "EDU_2", "INCOME_4", "LOST_WORK", "NOWORK_COVID")
+
+
+df_stim_sub <- df_all %>%
+  filter(WEEK %in% c(13,14,15,16,17,18,19,20,21,22) )  %>%
+  # mutate(EIP_RECV = replace_na(EIP_RECV, 0))
+  
+  # filter(WEEK == 22)  %>%
+  select(var_include)
+
+write.csv(df_stim_sub,
+          file.path(importDataPath,
+                    paste0("National_Pulse_Week13_22_StimulusPayment.csv") ),
+          row.names = F)
+
+
+
+
+
 
 
 
 
 # saveFilePrefix <- "National_Pulse_wtPrev_UIrecipients_by"
 # saveFilePrefix <- "National_Pulse_FoodInsuf_EligibleIncomeWorkingAge_by"
-# saveFilePrefix <- "National_Pulse_BehindRent_EligibleIncomeWorkingAge_by"
-saveFilePrefix <- "National_Pulse_Expenses_EligibleIncomeWorkingAge_by"
-# saveFilePrefix <- "National_Pulse_wtPrev_EligibleIncomeWorkingAgeAge_by"
+# saveFilePrefix <- "National_Pulse_AnxDepFoodMoney_EligibleIncomeWorkingAge_by"
+saveFilePrefix <- "National_Pulse_AnxDep3FoodMoney_EligibleIncomeWorkingAge_by"
+# saveFilePrefix <- "National_Pulse_AnxDep3FoodMoney_IneligibleIncomeWorkingAge_18_22_by"
+# saveFilePrefix <- "National_Pulse_BehindRentImputed_EligibleIncomeWorkingAge_by"
+# saveFilePrefix <- "National_Pulse_Expenses_EligibleIncomeWorkingAge_by"
+# saveFilePrefix <- "National_Pulse_FoodMoneyInsuf_EligibleIncomeWorkingAge_by"
 
 
+# plotTitle <- "Working Age & Ineligible Income"
 # plotTitle <- "Anxiety and Depression Symptoms\nUI Recipients"
-# plotTitle <- "Anxiety and Depression Symptoms\nWorking Age & Eligible Income"
-# plotTitle <- "Food Insufficiency\nWorking Age & Eligible Income"
+plotTitle <- "Anxiety and Depression Symptoms\nWorking Age & Eligible Income"
+# plotTitle <- "Food and Money Insufficiency\nWorking Age & Eligible Income"
 # plotTitle <- "Behind on Rent\nWorking Age Renters & Eligible Income"
-plotTitle <- "Difficulty with Expenses\nWorking Age & Eligible Income"
+# plotTitle <- "Difficulty with Expenses\nWorking Age & Eligible Income"
 # plotTitle <- "Anxiety and Depression Symptoms\nWorking Age & Not Eligible Income"
 
 hetStratVar <- NULL
@@ -91,20 +126,32 @@ hetStratVar <- NULL
 df <- df_all %>% 
   # filter(!FOODINSUF_missing) %>%
   # filter(!RENT_BHND_missing) %>%
-  filter(!MONEYINSUF_missing) %>%
+  # filter(!MONEYINSUF_missing) %>%
   filter(!PHQ4_missing) %>%
   
   filter(LOST_WORK != "Missing") %>%
   filter(EIP_RECV != "Missing") %>%
-  
-  filter((INCOME_4%in%c("0 - 34,999", "35,000 - 74,999") |
-            INCOME_4%in%c("0 - 34,999", "35,000 - 74,999", "75,000 - 149,999") & MS == 1 ) &
+  mutate(EIP_RECV_bin = EIP_RECV == "EIP") %>%
+  # filter( (INCOME_4%in%c("> 150,000") |
+  #           INCOME_4%in%c("75,000 - 149,999") & MS != 1 )  &
+  #          AGE < 65) %>%
+  # filter( (INCOME_4%in%c("> 150,000") & MS != 1 )  &
+  #           AGE < 65) %>%
+  filter( (INCOME_4%in%c("0 - 34,999", "35,000 - 74,999") |
+            INCOME_4%in%c("0 - 34,999", "35,000 - 74,999", "75,000 - 149,999") & MS == 1 )  &
            AGE < 65) %>%
   
-  left_join(df_cusp, by = c("EST_ST" = "FIPS")) %>%
-  left_join(df_weektime, by = "WEEK") %>%
+  # mutate(EIP_RECV = "Baseline") %>%
   
-  filter(Phase %in% c("2","3")) %>%
+  # filter(WEEK %in% c(13,14,15,16,17,18,19,20,21,22))
+  filter(WEEK %in% c(18, 19, 20, 21, 22))
+  # filter(WEEK >= 22) 
+  # filter(WEEK == 22)
+  
+  # filter(Phase %in% c("2","3")) 
+
+# -------------------------------------------------------------------------
+
   
   # filter(INCOME_4%in%c("> 150,000")  &
   #          AGE < 65) %>%
@@ -125,10 +172,21 @@ df <- df_all %>%
   # filter(INCOME_4%in%c("0 - 34,999", "35,000 - 74,999", "75,000 - 149,999") & AGE < 65 & THHLD_NUMKID > 0) %>%
   # filter(withCHILDREN) %>%
   # filter(EBSTART != 0) %>% # exclude states that never extended UI
-  mutate(UI_EB = endDate <= EBEND | is.na(EBEND),
-         UI_justEnded = ( (startDate - EBEND) > 0 & (endDate - EBEND) < 30) & !is.na(EBEND)  )
+  # mutate(UI_EB = endDate <= EBEND | is.na(EBEND),
+  #        UI_justEnded = ( (startDate - EBEND) > 0 & (endDate - EBEND) < 30) & !is.na(EBEND)  )
 
 
+svydsn <- svydesign(ids = ~SCRAM,
+                    weights = ~PWEIGHT,
+                    nest = T,
+                    data = df)
+df_prop<-get_svywt_prop_strat(svydsn, outcomeStr = "EIP_RECV_bin", by = "INCOME_4", BY_WEEK = TRUE, INCLUDE_FULL_SAMPLE = FALSE )
+df_prop %>%
+  ggplot(aes(x=WEEK, y = prop, col = INCOME_4) ) + geom_line() +geom_point()+
+  ylab("Household Received Stimulus Payment\nSurvey-weighted Prevalence (%)") +
+  xlab("Survey Wave")+
+  theme_bw()+
+  ylim(0, NA)
 # prop.table( table(df$EIP_RECV) )
 # prop.table( table(df$ANYWORK) )
 # prop.table( table(df$UI_APPLY) )
@@ -155,17 +213,23 @@ df <- df_all %>%
 # -------------------------------------------------------------------------
 
 # identify outcome variables
-# outcomeVar <- c("ANXIETY",
-                # "DEPRESSION")
-# outcomeVar <- c("FOODINSUF")
+# outcomeVar <- c("FOODINSUF",
+# "MONEYINSUF")
+outcomeVar <- c("MONEYINSUF",
+                "FOODINSUF",
+                "ANXIETY_3",
+                "DEPRESSION_3")
+
 # outcomeVar <- c("RENT_BHND")
-outcomeVar <- c("MONEYINSUF")
+
 # rename outcome factors
-# outcomeRename <- c("High GAD-2 Score (>= 5)",
-                   # "High PHQ-2 Score (>= 5)")
-# outcomeRename <- c("Food Insufficient")
+outcomeRename <- c("Difficulty with Expenses",
+                   "Food Insufficient",
+                   "Anxiety Symptoms (GAD-2 >= 3)",
+                   "Depression Symptoms (PHQ-2 >= 3)" )
+# outcomeRename <- c("Food Insufficient",
+#                    "Difficulty with Expenses")
 # outcomeRename <- c("Behind on Rent")
-outcomeRename <- c("Difficulty with Expenses")
 
 # # by state
 # strat_variables <- "EST_ST"
@@ -246,47 +310,54 @@ for(i in 1:length(strat_variables) ){
 
 # -------------------------------------------------------------------------
 
-# EIP plots
-# pos_d <- position_dodge( width=3 )
-pos_d <- position_dodge( width=0 )
-df_prev <- df_prev_svtwt%>%
-  mutate(d_prop = c(NA, diff(prop)))
+# # EIP plots
+# # pos_d <- position_dodge( width=3 )
+# pos_d <- position_dodge( width=0 )
+# df_prev <- df_prev_svtwt%>%
+#   mutate(d_prop = c(NA, diff(prop)))
+# 
+# p1 <- df_prev %>%
+#   mutate(EIP_RECV = factor(EIP_RECV, 
+#                            levels = levels_for_stratvar,
+#                            labels = labels_for_stratvar) ) %>%
+#   # filter(LOST_WORK != "Missing") %>%
+#   ggplot(aes(x =midDate, y = prop, col = EIP_RECV, group = EIP_RECV) ) +
+#   geom_line(position = pos_d) +
+#   geom_point(position = pos_d) +
+#   geom_ribbon(aes(ymin = ci_l, ymax = ci_u, fill = EIP_RECV), 
+#               col = NA, 
+#               alpha = 0.2,
+#               position = pos_d) +
+#   # geom_errorbar(aes(ymin = ci_l, ymax = ci_u, width = 0),position = pos_d) +
+#   facet_wrap(vars(Outcome), ncol= 1) +
+#   # facet_grid(cols = vars(!!sym(hetStratVar)), rows = vars(Outcome)) +
+#   theme_bw() +
+#   theme(legend.title = element_blank()
+#     # legend.position = "bottom",
+#         )+
+#   # guides(col=guide_legend(ncol=1, order = 2), 
+#          # fill=guide_legend(ncol=1, order = 2) ) +
+#   scale_color_brewer(palette = "Dark2")+
+#   scale_fill_brewer(palette = "Dark2")+
+#   xlab("Date") +
+#   ylab("Prevalence, % (95% CI)") +
+#   ggtitle(plotTitle) +
+#   ylim(0, NA)
+# p1
+# 
+# ggsave(file.path(importDataPath,
+#                  paste0(saveFilePrefix, stratVar, ".png")),
+#        plot = p1,
+#        device = "png",
+#        width = 6,
+#        height = 4)
 
-p1 <- df_prev %>%
-  mutate(EIP_RECV = factor(EIP_RECV, 
-                           levels = levels_for_stratvar,
-                           labels = labels_for_stratvar) ) %>%
-  # filter(LOST_WORK != "Missing") %>%
-  ggplot(aes(x =midDate, y = prop, col = EIP_RECV, group = EIP_RECV) ) +
-  geom_line(position = pos_d) +
-  geom_point(position = pos_d) +
-  geom_ribbon(aes(ymin = ci_l, ymax = ci_u, fill = EIP_RECV), 
-              col = NA, 
-              alpha = 0.2,
-              position = pos_d) +
-  # geom_errorbar(aes(ymin = ci_l, ymax = ci_u, width = 0),position = pos_d) +
-  facet_wrap(vars(Outcome), ncol= 1) +
-  # facet_grid(cols = vars(!!sym(hetStratVar)), rows = vars(Outcome)) +
-  theme_bw() +
-  theme(legend.title = element_blank()
-    # legend.position = "bottom",
-        )+
-  # guides(col=guide_legend(ncol=1, order = 2), 
-         # fill=guide_legend(ncol=1, order = 2) ) +
-  scale_color_brewer(palette = "Dark2")+
-  scale_fill_brewer(palette = "Dark2")+
-  xlab("Date") +
-  ylab("Prevalence, % (95% CI)") +
-  ggtitle(plotTitle) +
-  ylim(0, NA)
-p1
 
-ggsave(file.path(importDataPath,
-                 paste0(saveFilePrefix, stratVar, ".png")),
-       plot = p1,
-       device = "png",
-       width = 6,
-       height = 4)
+
+
+# -------------------------------------------------------------------------
+
+
 
 # for single plots
 # width = 5,
