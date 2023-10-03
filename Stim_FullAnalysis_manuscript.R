@@ -243,6 +243,9 @@ df <- df_forAnalysis %>%
 
 
 # chi-square test
+n_total_forAnalysis <- nrow(df)
+n_recv_stim <- sum(df$EIP_RECV)
+p_recv_stim <- round(n_recv_stim / n_total_forAnalysis * 100, 1)
 
 round( chisq.test(df$EIP_RECV, df$GENDER)$p.value , digits=3)
 round( chisq.test(df$EIP_RECV, df$AGE_4)$p.value , digits=3)
@@ -571,7 +574,7 @@ df_mdl_sensitivity_all <- df_mdl_adj_pweight  %>%
   bind_rows(df_mdl_adj_hweight ) %>%
   arrange(Variable, Outcome)
 
-write.csv(df_mdl_sensitivity_all, file.path(outputPath, "ModelOutputs_SensitivityAnalysis.csv"), row.names = FALSE )
+write.csv(df_mdl_sensitivity_all, file.path(outputPath, "ModelOutputs_PrimaryOutcomes_SensitivityAnalysis.csv"), row.names = FALSE )
 
 
 
